@@ -1,0 +1,33 @@
+{
+  "name": "web",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@heroicons/react": "^2.2.0",
+    "@onyantra-in/ui-kit": "github:onyantra-in/ui-kit",
+    "@zp/core": "*",
+    "idb": "^8.0.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-router-dom": "^7.18.5"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^4.7.0",
+    "postcss": "^8.4.38",
+    "tailwindcss": "^4.1.0",
+    "typescript": "^5.2.2",
+    "vite": "^7.0.0",
+    "vite-plugin-pwa": "^1.0.0",
+    "workbox-window": "^7.0.0"
+  }
+}

@@ -1,0 +1,13 @@
+node_modules
+dist
+dev-dist
+*.log
+.DS_Store
+.env*
+
+# Personal financial data: never commit. Drop your Console exports into Input/ locally.
+/Input/
+/scripts/seed-holdings.ts
+
+# Local, machine-specific overrides
+*.local.ts

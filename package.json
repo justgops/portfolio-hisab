@@ -1,0 +1,17 @@
+{
+  "name": "portfolio-hisab",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w web",
+    "build": "npm run build -w web",
+    "test": "npm run test -w @zp/core",
+    "test:core": "npm run test -w @zp/core",
+    "organize": "node scripts/organize-input.ts"
+  }
+}

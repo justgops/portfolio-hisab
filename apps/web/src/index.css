@@ -1,0 +1,4 @@
+@import '@onyantra-in/ui-kit/globals.css';
+
+html, body { margin: 0; overscroll-behavior: none; }
+body { -webkit-font-smoothing: antialiased; }
