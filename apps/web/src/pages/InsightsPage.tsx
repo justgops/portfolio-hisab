@@ -45,8 +45,25 @@ export default function InsightsPage() {
         <Kpi label="Top 5 weight" value={pct(k.top5, 0)} hint={`${k.count} holdings. Top 1: ${k.top1Symbol} ${pct(k.top1, 0)}. Top 10: ${pct(k.top10, 0)}`} />
         <Kpi label="Long-term share" value={pct(t.ltShare, 0)} hint="Share of holdings value held more than a year" />
       </div>
-      {r.unmatchedSells > 0 && <p className="rounded-lg border border-amber-400 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-        {inr(r.unmatchedSells)} shares were sold with no buy in the imported tradebooks (bought before {r.firstTrade ?? 'the first import'}), so their gain is left out of the realised figures and the tax estimate. Import older tradebooks to include them.</p>}
+      {(ins.tradebook.mismatches.length > 0 || ins.tradebook.unmatchedSales.length > 0) && (
+        <details className="overflow-hidden rounded-lg border border-amber-400 bg-amber-50 text-sm text-amber-900">
+          <summary className="cursor-pointer select-none px-3 py-2 font-semibold">
+            Tradebooks do not fully match: {ins.tradebook.unmatchedSales.length} sale{ins.tradebook.unmatchedSales.length === 1 ? '' : 's'} with no purchase, {ins.tradebook.mismatches.length} holding{ins.tradebook.mismatches.length === 1 ? '' : 's'} off
+          </summary>
+          <div className="space-y-3 bg-white px-3 py-2 text-gray-800">
+            <p className="text-xs text-gray-600">Sales with no purchase are left out of realised gain and tax. What remains here is what a tradebook cannot show: IPO allotments, transfers, bonus, splits, mergers, or years not imported yet. Add the missing years on the Import page, or record the capital on the Accounts page.</p>
+            {ins.tradebook.unmatchedSales.length > 0 && (
+              <table className="w-full border-collapse"><thead><tr><th className={th}>Account</th><th className={th}>Sold, no purchase</th><th className={th}>Qty</th><th className={th}>First sale</th></tr></thead>
+                <tbody>{ins.tradebook.unmatchedSales.map(u => <tr key={u.account + u.symbol} className="odd:bg-gray-50"><td className={td}>{u.account}</td><td className={td}>{u.symbol}</td><td className={td}>{inr(u.quantity)}</td><td className={td}>{u.firstDate}</td></tr>)}</tbody></table>
+            )}
+            {ins.tradebook.mismatches.length > 0 && (
+              <table className="w-full border-collapse"><thead><tr><th className={th}>Account</th><th className={th}>Stock</th><th className={th}>Held</th><th className={th}>Tradebooks</th><th className={th}>Difference</th></tr></thead>
+                <tbody>{ins.tradebook.mismatches.map(m => <tr key={m.account + m.symbol} className="odd:bg-gray-50" title={m.hint}><td className={td}>{m.account}</td><td className={td}>{m.symbol}</td><td className={td}>{inr(m.held)}</td><td className={td}>{inr(m.tradebookOpen)}</td><td className={`${td} ${tone(m.diff)}`}>{inrSigned(m.diff)}</td></tr>)}</tbody></table>
+            )}
+            <p className="text-xs text-gray-500">Hold or tap a row for the likely reason: positive difference means held more than the tradebooks explain, negative means the tradebooks show more than is held.</p>
+          </div>
+        </details>
+      )}
 
       <Panel title="Realised gains and estimated tax by year">
         <div className="overflow-x-auto">

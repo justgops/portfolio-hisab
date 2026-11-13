@@ -109,3 +109,53 @@ describe('insights', () => {
     expect(i.unrealized).toBeCloseTo(1000)
   })
 })
+
+import { buildLots, tradebookCheck, parseTradebook } from './index.ts'
+const tr = (symbol: string, isin: string, date: string, time: string, side: 'buy' | 'sell', quantity: number, price: number, n = 0): Trade =>
+  ({ symbol, isin, date, exchange: 'NSE', side, quantity, price, tradeId: String(n), orderId: '', executedAt: `${date}T${time}` })
+
+describe('buildLots matching', () => {
+  it('pairs a same-day sell-then-buy as an intraday slice instead of an unmatched sale', () => {
+    const r = buildLots([tr('KECL', 'I1', '2023-04-20', '10:30:23', 'sell', 100, 93), tr('KECL', 'I1', '2023-04-20', '10:38:21', 'buy', 100, 92)])
+    expect(r.unmatchedSells).toEqual([])
+    expect(r.slices).toHaveLength(1)
+    expect(r.slices[0]).toMatchObject({ quantity: 100, buyDate: '2023-04-20', sellDate: '2023-04-20', buyPrice: 92, sellPrice: 93 })
+  })
+  it('a short not covered the same day stays unmatched; the later buy stays open', () => {
+    const r = buildLots([tr('X', 'I2', '2023-04-20', '10:00:00', 'sell', 10, 50), tr('X', 'I2', '2023-04-21', '10:00:00', 'buy', 10, 49)])
+    expect(r.unmatchedSells.map(u => u.quantity)).toEqual([10])
+    expect(r.slices.filter(s => !s.sellDate)).toHaveLength(1)
+  })
+  it('a rename (same ISIN) stays one stock and carries the latest symbol', () => {
+    const r = buildLots([tr('IDFCBANK', 'I3', '2018-09-28', '14:00:00', 'buy', 500, 36), tr('IDFCFIRSTB', 'I3', '2020-12-09', '11:00:00', 'sell', 500, 37)])
+    expect(r.unmatchedSells).toEqual([])
+    expect(r.slices).toHaveLength(1)
+    expect(r.slices[0]).toMatchObject({ symbol: 'IDFCFIRSTB', sellDate: '2020-12-09' })
+  })
+  it('negative quantities count as their absolute value, trades in any order', () => {
+    const csv = 'symbol,isin,trade_date,exchange,segment,series,trade_type,auction,quantity,price,trade_id,order_id,order_execution_time\n' +
+      'ITC,I4,2018-05-02,NSE,EQ,EQ,sell,false,-100.000000,284.6,2,2,2018-05-02T11:55:17\n' +
+      'ITC,I4,2018-05-02,NSE,EQ,EQ,buy,false,100.000000,282,1,1,2018-05-02T09:39:37\n'
+    const t = parseTradebook(csv)
+    expect(t.map(x => x.quantity)).toEqual([100, 100])
+    const r = buildLots([...t].reverse())
+    expect(r.unmatchedSells).toEqual([])
+    expect(r.slices[0].sellDate).toBe('2018-05-02')
+  })
+})
+
+describe('tradebookCheck', () => {
+  it('lists holdings the tradebooks do not explain and sales with no purchase', () => {
+    const a = {
+      clientId: 'T', name: 'Tee', ledger: [], holdingsAsOn: '2025-01-01', dividends: [],
+      holdings: [
+        { symbol: 'AAA', isin: 'A', kind: 'equity' as const, sector: '', quantity: 10, longTermQty: 0, avgPrice: 1, prevClose: 1 },
+        { symbol: 'IPO', isin: 'P', kind: 'equity' as const, sector: '', quantity: 5, longTermQty: 0, avgPrice: 1, prevClose: 1 },
+      ],
+      eqTrades: [tr('AAA', 'A', '2024-01-01', '10:00:00', 'buy', 10, 1), tr('GONE', 'G', '2024-02-01', '10:00:00', 'sell', 7, 1)],
+    }
+    const c = tradebookCheck([a], '2025-01-01')
+    expect(c.mismatches.map(m => [m.symbol, m.diff])).toEqual([['IPO', 5]])
+    expect(c.unmatchedSales.map(u => [u.symbol, u.quantity])).toEqual([['GONE', 7]])
+  })
+})

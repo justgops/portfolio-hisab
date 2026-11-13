@@ -16,7 +16,7 @@ export function parseTradebook(csv: string): Trade[] {
       date: r.trade_date,
       exchange: r.exchange ?? '',
       side: (r.trade_type.toLowerCase() === 'sell' ? 'sell' : 'buy') as Trade['side'],
-      quantity: num(r.quantity),
+      quantity: Math.abs(num(r.quantity)),   // some older rows carry a negative quantity on sells
       price: num(r.price),
       tradeId: r.trade_id ?? '',
       orderId: r.order_id ?? '',

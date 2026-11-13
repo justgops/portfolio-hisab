@@ -204,6 +204,62 @@ export function movers(holdings: HoldingRow[], n = 3): Movers {
   }
 }
 
+/* ---------- tradebook vs holdings ---------- */
+
+export interface Mismatch {
+  account: string
+  symbol: string
+  held: number          // quantity in the holdings statement
+  tradebookOpen: number // quantity the tradebooks leave open
+  diff: number          // held - tradebookOpen
+  hint: string
+}
+
+export interface UnmatchedSale { account: string; symbol: string; quantity: number; firstDate: ISODate }
+
+export interface TradebookCheck {
+  mismatches: Mismatch[]
+  unmatchedSales: UnmatchedSale[]
+}
+
+const baseSymbol = (s: string) => s.split('-')[0]
+
+/**
+ * Where the equity tradebooks and the holdings statement disagree, per account. What is left after matching by ISIN,
+ * absolute quantities and same-day shorts is mostly what a tradebook cannot show: shares that arrived without a trade
+ * (IPO allotment, transfer-in, bonus, split, demerger) or left without one (transfer-out, merger, delisting).
+ */
+export function tradebookCheck(accounts: InsightAccount[], asOf: ISODate): TradebookCheck {
+  const mismatches: Mismatch[] = [], unmatchedSales: UnmatchedSale[] = []
+  for (const a of accounts) {
+    const trades = (a.eqTrades ?? []).filter(t => t.date <= asOf)
+    if (!trades.length) continue
+    const { slices, unmatchedSells } = buildLots(trades)
+    const open = new Map<string, number>(), held = new Map<string, number>()
+    for (const sl of slices) if (!sl.sellDate) open.set(baseSymbol(sl.symbol), (open.get(baseSymbol(sl.symbol)) ?? 0) + sl.quantity)
+    if (a.holdingsAsOn) for (const h of a.holdings) if (h.quantity > 0) held.set(baseSymbol(h.symbol), (held.get(baseSymbol(h.symbol)) ?? 0) + h.quantity)
+    if (a.holdingsAsOn) for (const sym of new Set([...open.keys(), ...held.keys()])) {
+      const o = open.get(sym) ?? 0, h = held.get(sym) ?? 0
+      if (Math.abs(h - o) < 1e-6) continue
+      mismatches.push({
+        account: a.name, symbol: sym, held: h, tradebookOpen: o, diff: h - o,
+        hint: h > o
+          ? 'Held more than the tradebooks explain: bought before the first tradebook, IPO or transfer-in, bonus or split'
+          : 'Tradebooks show more than held: sold or moved out without a trade, or a split, merger or rename changed it',
+      })
+    }
+    const by = new Map<string, UnmatchedSale>()
+    for (const u of unmatchedSells) {
+      const k = baseSymbol(u.symbol)
+      const cur = by.get(k)
+      if (cur) cur.quantity += u.quantity
+      else by.set(k, { account: a.name, symbol: u.symbol, quantity: u.quantity, firstDate: u.date })
+    }
+    unmatchedSales.push(...by.values())
+  }
+  return { mismatches: mismatches.sort((x, y) => Math.abs(y.diff) - Math.abs(x.diff)), unmatchedSales: unmatchedSales.sort((x, y) => x.firstDate.localeCompare(y.firstDate)) }
+}
+
 /* ---------- everything together ---------- */
 
 export interface PortfolioInsights {
@@ -217,6 +273,7 @@ export interface PortfolioInsights {
   concentration: Concentration
   term: TermSplit
   movers: Movers
+  tradebook: TradebookCheck
 }
 
 export function insights(accounts: InsightAccount[], views: AccountView[], total: Combined, asOf: ISODate, rate: number): PortfolioInsights {
@@ -234,5 +291,6 @@ export function insights(accounts: InsightAccount[], views: AccountView[], total
     concentration: concentration(holdings),
     term: termSplit(holdings),
     movers: movers(holdings),
+    tradebook: tradebookCheck(accounts, asOf),
   }
 }
