@@ -56,3 +56,6 @@ export function Kpi({ label, value, hint, tone }: { label: string; value: string
     </div>
   )
 }
+
+/** "12 days ago" style age; null when unknown. */
+export const ago = (days: number | null) => (days === null ? '–' : days === 0 ? 'today' : days === 1 ? '1 day ago' : `${days} days ago`)

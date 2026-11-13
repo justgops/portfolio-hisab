@@ -1,6 +1,7 @@
 import { Fragment, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { checkLedger } from '@zp/core'
+import { FreshnessReminder } from '../Freshness.tsx'
 import { AppChrome } from '../AppChrome.tsx'
 import { useData } from '../data.tsx'
 import { inr, inrSigned, pct, pctSigned } from '../fmt.ts'
@@ -34,6 +35,7 @@ export default function DashboardPage() {
 
   return (
     <AppChrome title="Dashboard" controls>
+      <FreshnessReminder />
       {noHoldings.length > 0 && <p className={notice}>No holdings file for {noHoldings.join(', ')}, so its market value counts as 0 and the gain is understated. Add its holdings XLSX on the Import page.</p>}
       {badLedgers.length > 0 && <p className={notice}>Ledger for {badLedgers.join(', ')} has missing rows, so the investment figures may be wrong. See the Accounts page.</p>}
 

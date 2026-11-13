@@ -16,6 +16,8 @@ export interface ExtraCapital {
   key?: string
 }
 
+export type ImportKind = 'ledger' | 'holdings' | 'tradebook' | 'dividends'
+
 /** Everything stored for one account. */
 export interface AccountRecord {
   clientId: string
@@ -27,6 +29,8 @@ export interface AccountRecord {
   foTrades: Trade[]
   dividends: Dividend[]
   extraCapital: ExtraCapital[]
+  /** When a file of each kind was last imported (ISO date-time). Missing on records saved before this was tracked. */
+  importedAt?: Partial<Record<ImportKind, string>>
 }
 
 export const blankAccount = (clientId: string, name = clientId): AccountRecord => ({
@@ -49,6 +53,17 @@ export function mergeLedger(a: LedgerEntry[], b: LedgerEntry[]): LedgerEntry[] {
   return out.sort((x, y) => (x.date ?? '').localeCompare(y.date ?? ''))
 }
 
+const laterOf = (a: string | undefined, b: string | undefined) => (a && b ? (a > b ? a : b) : a ?? b)
+
+function mergeImportedAt(a: AccountRecord['importedAt'], b: AccountRecord['importedAt']): AccountRecord['importedAt'] {
+  const out: NonNullable<AccountRecord['importedAt']> = {}
+  for (const k of ['ledger', 'holdings', 'tradebook', 'dividends'] as const) {
+    const v = laterOf(a?.[k], b?.[k])
+    if (v) out[k] = v
+  }
+  return out
+}
+
 /** Folds `incoming` into `local`: union of ledger/trades, newer holdings win, a custom local name is kept. */
 export function mergeAccount(local: AccountRecord | undefined, incoming: AccountRecord): AccountRecord {
   if (!local) return structuredClone(incoming)
@@ -63,6 +78,7 @@ export function mergeAccount(local: AccountRecord | undefined, incoming: Account
     foTrades: dedupeTrades([...local.foTrades, ...incoming.foTrades]),
     dividends: dedupeDividends([...(local.dividends ?? []), ...(incoming.dividends ?? [])]),
     extraCapital: [...(local.extraCapital ?? []), ...(incoming.extraCapital ?? []).filter(x => !(local.extraCapital ?? []).some(y => y.id === x.id))],
+    importedAt: mergeImportedAt(local.importedAt, incoming.importedAt),
   }
 }
 

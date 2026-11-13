@@ -1,4 +1,4 @@
-import { blankAccount, dedupeTrades, identifyFile, mergeAccount, mergeLedger, dedupeDividends, parseBackup, parseDividends, parseHoldingsXlsx, parseLedger, parseTradebook } from '@zp/core'
+import { blankAccount, type ImportKind, dedupeTrades, identifyFile, mergeAccount, mergeLedger, dedupeDividends, parseBackup, parseDividends, parseHoldingsXlsx, parseLedger, parseTradebook } from '@zp/core'
 import type { AccountRecord } from './db.ts'
 import { ACCOUNT_DEFAULTS } from './accountDefaults.ts'
 
@@ -35,26 +35,31 @@ export async function importFiles(files: File[], accounts: Map<string, AccountRe
       const idn = identifyFile(f.name, bytes, fallback)
       if (!idn.clientId) throw new Error('Cannot tell which account this belongs to. Import it together with a file that names the client (holdings or ledger), or rename it ClientID_...')
       const a = get(idn.clientId)
+      const stamp = (k: ImportKind) => { a.importedAt = { ...a.importedAt, [k]: new Date().toISOString() } }
       const saved = idn.canonical ? ` → ${idn.canonical}` : ''
       const text = idn.kind === 'holdings' ? '' : new TextDecoder().decode(bytes)
       if (idn.kind === 'holdings') {
         const h = parseHoldingsXlsx(bytes)
+        stamp('holdings')
         const equity = h.holdings.filter(x => x.kind === 'equity')
         if (!a.holdingsAsOn || h.asOn >= a.holdingsAsOn) { a.holdings = equity; a.holdingsAsOn = h.asOn }
         results.push({ file: f.name, ok: true, clientId: idn.clientId, message: `Holdings as on ${h.asOn}: ${equity.length} equity (mutual funds ignored)${saved}` })
       } else if (idn.kind === 'ledger') {
         const rows = parseLedger(text)
+        stamp('ledger')
         const before = a.ledger.length
         a.ledger = mergeLedger(a.ledger, rows)
         results.push({ file: f.name, ok: true, clientId: idn.clientId, message: `Ledger: ${rows.length} rows, ${a.ledger.length - before} new${saved}` })
       } else if (idn.kind === 'dividends') {
         const rows = parseDividends(text)
+        stamp('dividends')
         const before = a.dividends.length
         a.dividends = dedupeDividends([...a.dividends, ...rows])
         results.push({ file: f.name, ok: true, clientId: idn.clientId, message: `Dividends: ${rows.length} rows, ${a.dividends.length - before} new${saved}` })
       } else {
         const fo = idn.kind === 'tradebook-fo'
         const rows = parseTradebook(text)
+        stamp('tradebook')
         const before = (fo ? a.foTrades : a.eqTrades).length
         const merged = dedupeTrades([...(fo ? a.foTrades : a.eqTrades), ...rows])
         if (fo) a.foTrades = merged; else a.eqTrades = merged

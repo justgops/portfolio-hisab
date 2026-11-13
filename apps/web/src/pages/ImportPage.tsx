@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react'
 import { Button } from '@onyantra-in/ui-kit/base'
 import { coverageByFY } from '@zp/core'
 import { AppChrome } from '../AppChrome.tsx'
+import { FreshnessPanel } from '../Freshness.tsx'
 import { exportBackup } from '../backup.ts'
 import { useData } from '../data.tsx'
 import type { AccountRecord } from '../db.ts'
@@ -67,6 +68,8 @@ export default function ImportPage() {
           )}
         </div>
       </Panel>
+
+      {accounts.length > 0 && <FreshnessPanel />}
 
       <Panel title="Backup & move to another device">
         <div className="space-y-2 p-4">
