@@ -5,6 +5,7 @@ import { TooltipProvider } from '@onyantra-in/ui-kit/base'
 import { registerSW } from 'virtual:pwa-register'
 import App from './App.tsx'
 import { DataProvider } from './data.tsx'
+import './install.ts'
 import './index.css'
 
 registerSW({ immediate: true })

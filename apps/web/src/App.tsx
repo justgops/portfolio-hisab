@@ -1,6 +1,8 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { useData } from './data.tsx'
+import { InstallGate } from './InstallGate.tsx'
+import { isInstalledOrDesktop } from './install.ts'
 import AccountsPage from './pages/AccountsPage.tsx'
 import DashboardPage from './pages/DashboardPage.tsx'
 import HoldingsPage from './pages/HoldingsPage.tsx'
@@ -8,6 +10,7 @@ import ImportPage from './pages/ImportPage.tsx'
 import SchedulePage from './pages/SchedulePage.tsx'
 
 export default function App() {
+  const [installed] = useState(isInstalledOrDesktop)
   const { ready, accounts } = useData()
   const navigate = useNavigate()
   const { pathname } = useLocation()
@@ -15,6 +18,7 @@ export default function App() {
   // A first-time visitor has nothing to show; start on Import.
   useEffect(() => { if (ready && accounts.length === 0 && pathname === '/') navigate('/import', { replace: true }) }, [ready, accounts.length, pathname, navigate])
 
+  if (!installed) return <InstallGate />   // before the data wait, so the install prompt is available immediately
   if (!ready) return null
   return (
     <Routes>
