@@ -27,7 +27,7 @@ and the dev server renames anything dropped there. The folder is not part of the
 A static PWA: the `Dockerfile` builds it with Node and serves it with nginx (`nginx.conf`: single-page-app fallback, no-cache on
 `index.html` / `sw.js` / the manifest, immutable caching for hashed assets, `/health` for the health check). There is no server or database.
 
-In Coolify: new application from this repository, build pack **Dockerfile**, port **80**, health check path `/health`, add a domain
+In Coolify: new application from this repository, build pack **Dockerfile**, port **3000** (Coolify's default), health check path `/health`, add a domain
 (HTTPS is required for the service worker and "install app"). Build locally with `docker build -t portfolio-hisab .`.
 
 ## Private data
