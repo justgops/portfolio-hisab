@@ -1,10 +1,10 @@
-import { blankAccount, type ImportKind, dedupeTrades, identifyFile, mergeAccount, mergeLedger, dedupeDividends, parseBackup, parseDividends, parseHoldingsXlsx, parseLedger, parseTradebook } from '@zp/core'
+import { blankAccount, type ImportKind, dedupeTrades, identifyFile, mergeLedger, dedupeDividends, parseBackup, parseDividends, parseHoldingsXlsx, parseLedger, parseTradebook } from '@zp/core'
 import type { AccountRecord } from './db.ts'
 import { ACCOUNT_DEFAULTS } from './accountDefaults.ts'
 
 export interface ImportResult { file: string; ok: boolean; message: string; clientId?: string }
 
-/** Reads files (any filename), identifies them by contents, and merges them into account records (mutates `accounts`). */
+/** Reads files (any filename), identifies them by contents, and merges Console exports into account records; a backup replaces its accounts (mutates `accounts`). */
 export async function importFiles(files: File[], accounts: Map<string, AccountRecord>): Promise<ImportResult[]> {
   const results: ImportResult[] = []
   const get = (id: string) => { let a = accounts.get(id); if (!a) accounts.set(id, a = { ...blankAccount(id, ACCOUNT_DEFAULTS[id]?.name ?? id) }); return a }
@@ -15,8 +15,9 @@ export async function importFiles(files: File[], accounts: Map<string, AccountRe
     if (!/\.json$/i.test(f.name)) { consoleFiles.push(f); continue }
     try {
       const b = parseBackup(await f.text())
-      for (const acc of b.accounts) accounts.set(acc.clientId, mergeAccount(accounts.get(acc.clientId), acc))
-      results.push({ file: f.name, ok: true, message: `Backup from ${b.exportedAt.slice(0, 10)}: ${b.accounts.length} account${b.accounts.length === 1 ? '' : 's'} merged` })
+      // A backup is a restore: each account's data is replaced by the backup's; the name you gave it on this device stays.
+      for (const acc of b.accounts) accounts.set(acc.clientId, { ...structuredClone(acc), name: accounts.get(acc.clientId)?.name ?? acc.name })
+      results.push({ file: f.name, ok: true, message: `Backup from ${b.exportedAt.slice(0, 10)}: ${b.accounts.length} account${b.accounts.length === 1 ? '' : 's'} restored (names kept)` })
     } catch (e) {
       results.push({ file: f.name, ok: false, message: e instanceof Error ? e.message : String(e) })
     }

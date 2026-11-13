@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react'
 import { Button } from '@onyantra-in/ui-kit/base'
-import { coverageByFY } from '@zp/core'
+import { coverageByFY, parseBackup } from '@zp/core'
 import { AppChrome } from '../AppChrome.tsx'
 import { FreshnessPanel } from '../Freshness.tsx'
 import { exportBackup } from '../backup.ts'
@@ -20,6 +20,12 @@ export default function ImportPage() {
 
   async function handle(list: File[]) {
     if (!list.length) return
+    // A backup replaces the accounts it contains, so say which ones before anything is overwritten.
+    const replaced = new Set<string>()
+    for (const f of list.filter(x => /\.json$/i.test(x.name))) {
+      try { for (const b of parseBackup(await f.text()).accounts) if (accounts.some(a => a.clientId === b.clientId)) replaced.add(b.name || b.clientId) } catch { /* reported by the import itself */ }
+    }
+    if (replaced.size && !confirm(`Importing this backup replaces the data of ${[...replaced].join(', ')} with the backup's (names are kept). Anything added since the backup was taken is lost. Continue?`)) return
     setBusy(true)
     const map = new Map(accounts.map(a => [a.clientId, structuredClone(a)]))
     const res = await importFiles(list, map)
@@ -75,7 +81,7 @@ export default function ImportPage() {
         <div className="space-y-2 p-4">
           <p className="text-sm text-gray-600">
             Your data lives only in this browser. Export one backup file (all accounts), send it to your phone or another computer, and import it there with <b>Choose files</b> above.
-            Importing a backup merges with what is already on the device.
+            Importing a backup replaces the data of the accounts in it and keeps their names (you are asked first); accounts not in the backup are left alone. Console files are merged as usual.
           </p>
           <div className="flex flex-wrap items-center gap-2">
             <Button onClick={() => void doExport()}>Export backup</Button>
