@@ -22,6 +22,14 @@ npm test           # core tests
 Create an `Input/` folder next to `package.json` and put your Console exports in it. In dev they are loaded automatically on first run,
 and the dev server renames anything dropped there. The folder is not part of the repository.
 
+## Deploy (Coolify, same flow as fabric-costing-lite)
+
+A static PWA: the `Dockerfile` builds it with Node and serves it with nginx (`nginx.conf`: single-page-app fallback, no-cache on
+`index.html` / `sw.js` / the manifest, immutable caching for hashed assets, `/health` for the health check). There is no server or database.
+
+In Coolify: new application from this repository, build pack **Dockerfile**, port **80**, health check path `/health`, add a domain
+(HTTPS is required for the service worker and "install app"). Build locally with `docker build -t portfolio-hisab .`.
+
 ## Private data
 
 `Input/` holds real ledgers, tradebooks and holdings and is entirely git-ignored (the folder itself is not tracked). The core tests read those files, so they only pass on a machine

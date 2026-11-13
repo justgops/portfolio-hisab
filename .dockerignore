@@ -1,0 +1,17 @@
+node_modules
+**/node_modules
+dist
+**/dist
+dev-dist
+**/dev-dist
+.git
+.env
+**/.env
+.env.*
+.DS_Store
+*.log
+
+# Personal financial data: must never end up in an image
+Input
+scripts/seed-holdings.ts
+**/*.local.ts
