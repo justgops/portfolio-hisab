@@ -41,7 +41,7 @@ export default function DashboardPage() {
         <Kpi label="Invested" value={inr(total.totalInvestment)} hint="Pay-ins minus payouts, plus other capital you added, less mutual fund purchases when Equity & F&O only is on" />
         <Kpi label="Value now" value={inr(total.value)} hint={`Holdings ${inr(total.market)} + cash ${inr(total.cash)}`} />
         <Kpi label="Total gain" value={inrSigned(total.gain)} hint={`${pctSigned(total.gainPct, 0)} on invested. Value now + dividends − invested`} tone={total.gain >= 0 ? 'good' : 'bad'} />
-        <Kpi label="XIRR" value={xirrCell(total.xirr)} hint={`Annualised return, compared with the ${ratePct}% hurdle`} tone={total.xirr === null ? undefined : total.xirr >= rate ? 'good' : 'bad'} />
+        <Kpi label="XIRR" value={xirrCell(total.xirr)} hint={`Annualised return, compared with the ${ratePct}% hurdle${total.xirr === null ? '' : ` (${((total.xirr - rate) * 100) > 0 ? "+" : ""}${((total.xirr - rate) * 100).toFixed(1)} pts)`}`} tone={total.xirr === null ? undefined : total.xirr >= rate ? 'good' : 'bad'} />
         <Kpi label="Dividends" value={inr(total.dividends)} hint="Received; included in gain, hurdle gap and XIRR" />
         <Kpi label={`Over ${ratePct}% hurdle`} value={inrSigned(total.hurdleGap)} hint="Value now + dividends − what your invested money would be worth at the hurdle rate" tone={total.hurdleGap >= 0 ? 'good' : 'bad'} />
       </div>

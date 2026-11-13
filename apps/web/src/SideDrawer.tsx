@@ -1,12 +1,13 @@
 import { NavLink } from 'react-router-dom'
 import { Drawer as KitDrawer, DrawerContent } from '@onyantra-in/ui-kit/base'
 import { APP_NAME, APP_VERSION } from './version.ts'
-import { ArrowUpTrayIcon, BriefcaseIcon, ChartBarIcon, TableCellsIcon, UsersIcon } from '@heroicons/react/24/outline'
+import { ArrowUpTrayIcon, BriefcaseIcon, ChartBarIcon, LightBulbIcon, TableCellsIcon, UsersIcon } from '@heroicons/react/24/outline'
 
 const items = [
   { to: '/', label: 'Dashboard', Icon: ChartBarIcon, end: true },
   { to: '/schedule', label: 'Investment schedule', Icon: TableCellsIcon },
   { to: '/holdings', label: 'Holdings', Icon: BriefcaseIcon },
+  { to: '/insights', label: 'Insights', Icon: LightBulbIcon },
   { to: '/accounts', label: 'Accounts', Icon: UsersIcon },
   { to: '/import', label: 'Import & backup', Icon: ArrowUpTrayIcon },
 ]
