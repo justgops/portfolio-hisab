@@ -48,7 +48,7 @@ const plan = files.map(f => {
     const r = identifyFile(name, f.bytes, accountOf(f.rel) ?? onlyId)
     id = r.clientId; kind = r.kind; canonical = r.canonical
   } catch (e) { return { f, error: (e as Error).message } }
-  if (!id || !canonical) return { f, error: 'cannot tell the client or dates' }
+  if (!id || !canonical) return { f, error: 'cannot tell the client or dates (if the file does not mention its client, put the client id in the file name, e.g. SMJ193_other_capital.csv)' }
   const target = `${id}/${KIND_FOLDER[kind]}`
   const inPlace = path.posix.dirname(f.rel) === target && sameName(name, canonical)
   if (inPlace) { placed.add(f.rel); owners.set(key(id, hash(f.bytes)), f.rel) }

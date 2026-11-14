@@ -19,7 +19,7 @@ npm run build
 npm test           # core tests
 ```
 
-Create an `Input/` folder next to `package.json` and drop your Console exports loose in it. They are sorted into one folder per account (`Input/<ClientID>/ledger`, `tradebook`, `dividends`, `holdings`) automatically in dev, or with `npm run organize`. In dev they are loaded automatically on first run,
+Create an `Input/` folder next to `package.json` and drop your Console exports loose in it. They are sorted into one folder per account (`Input/<ClientID>/ledger`, `tradebook`, `dividends`, `holdings`, `capital`) automatically in dev, or with `npm run organize`. In dev they are loaded automatically on first run,
 and the dev server renames anything dropped there. The folder is not part of the repository.
 
 ## Deploy (Coolify, same flow as fabric-costing-lite)
@@ -38,3 +38,10 @@ where `Input/` is populated. Owner names go in `apps/web/src/accountDefaults.loc
 ## Versioning
 
 The version is `apps/web/package.json`, shown in the app menu. Bump it with `npm version patch -w web` (or `minor`, `major`).
+
+## Other capital (IPO and transfer-in money)
+
+Money that never touches the Zerodha ledger (an IPO paid by UPI, shares moved in from another demat) is not in any Console export, so it goes in
+`Input/<ClientID>/capital/<ClientID>_OTHER_CAPITAL.csv` with the columns `date,amount,note,key`. `date` is when the money left your bank (IPO allotment),
+`amount` is the cost, and the optional `key` (`sell:DATE:SYMBOL` or `hold:SYMBOL`, several separated by `;`) hides the app's matching suggestion.
+The file is imported like any other, on any device, and importing it again replaces the entries that came from the file (entries typed in the app are kept).

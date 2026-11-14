@@ -4,15 +4,16 @@
  *   Input/BP1917/tradebook/BP1917_2023-24_EQ.csv      (equity and F&O)
  *   Input/BP1917/dividends/BP1917_2023-24_DIVIDENDS.csv
  *   Input/BP1917/holdings/BP1917_2026-11-14_HOLDINGS.xlsx
+ *   Input/BP1917/capital/BP1917_OTHER_CAPITAL.csv     (IPO / transfer-in money, see packages/core/src/capital.ts)
  * Files dropped loose in Input/ are sorted into place by `npm run organize`.
  */
 import { existsSync, readdirSync, statSync } from 'node:fs'
 import path from 'node:path'
 
 export const KIND_FOLDER: Record<string, string> = {
-  ledger: 'ledger', holdings: 'holdings', dividends: 'dividends', 'tradebook-eq': 'tradebook', 'tradebook-fo': 'tradebook',
+  ledger: 'ledger', holdings: 'holdings', dividends: 'dividends', 'tradebook-eq': 'tradebook', 'tradebook-fo': 'tradebook', capital: 'capital',
 }
-export const KIND_FOLDERS = ['ledger', 'tradebook', 'dividends', 'holdings']
+export const KIND_FOLDERS = ['ledger', 'tradebook', 'dividends', 'holdings', 'capital']
 
 /** A client id folder name such as BP1917 (capitals and digits, at least one digit). Excludes helper folders like combined/. */
 export const isAccountDir = (name: string) => /^[A-Z0-9]{4,}$/.test(name) && /\d/.test(name)

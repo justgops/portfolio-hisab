@@ -14,6 +14,8 @@ export interface ExtraCapital {
   note: string
   /** Set for entries accepted from a suggestion, so the same suggestion is not offered twice. */
   key?: string
+  /** 'file' for entries read from an OTHER_CAPITAL csv: re-importing the file replaces them. */
+  source?: 'file'
 }
 
 export type ImportKind = 'ledger' | 'holdings' | 'tradebook' | 'dividends'

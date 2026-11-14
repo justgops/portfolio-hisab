@@ -57,7 +57,7 @@ export default function ImportPage() {
       <Panel title="Import Console files">
         <div className="space-y-2 p-4" onDragOver={e => e.preventDefault()} onDrop={e => { e.preventDefault(); void handle([...e.dataTransfer.files]) }}>
           <p className="text-sm text-gray-600">
-            Choose ledger CSV, tradebook CSV (equity or F&amp;O), holdings XLSX or a backup file, with any file name. Each file is identified by its contents (segment, FY, client).
+            Choose ledger CSV, tradebook CSV (equity or F&amp;O), holdings XLSX, an OTHER_CAPITAL CSV (IPO and transfer-in money) or a backup file, with any file name. Each file is identified by its contents (segment, FY, client).
             Re-importing overlapping files is safe; duplicates are skipped. For the dashboard you only need each account's <b>ledger</b> and <b>holdings</b>.
           </p>
           <input ref={files} type="file" multiple accept=".csv,.xlsx,.json" hidden onChange={e => { void handle([...(e.target.files ?? [])]); e.target.value = '' }} />

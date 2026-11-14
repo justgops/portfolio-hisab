@@ -510,3 +510,33 @@ describe('off-ledger capital suggestions', () => {
     expect(suggestOffLedgerCapital(a).suggestions).toMatchObject([{ key: 'sell:2025-12-19:IPO', amount: 15600 }])
   })
 })
+
+import { applyOtherCapital, parseOtherCapital } from './index.ts'
+
+describe('other capital file', () => {
+  const csv = 'date,amount,note,key\n2025-12-17,207840,"ICICIAMC IPO, 96 sh",sell:2025-12-19:ICICIAMC\n2023-12-26,14672,Azad IPO,sell:2025-06-11:AZAD;sell:2026-10-14:AZAD\n'
+  it('is recognised by its header and filed as ClientID_OTHER_CAPITAL.csv', () => {
+    const r = identifyFile('anything.csv', new TextEncoder().encode(csv), 'TT1234')
+    expect(r).toMatchObject({ kind: 'capital', clientId: 'TT1234', canonical: 'TT1234_OTHER_CAPITAL.csv' })
+    expect(identifyFile('TT1234_OTHER_CAPITAL.csv', new TextEncoder().encode(csv)).clientId).toBe('TT1234')
+  })
+  it('parses rows (quoted commas, optional key) and rejects bad ones', () => {
+    const rows = parseOtherCapital(csv)
+    expect(rows).toMatchObject([{ date: '2025-12-17', amount: 207840, note: 'ICICIAMC IPO, 96 sh', key: 'sell:2025-12-19:ICICIAMC', source: 'file' }, { amount: 14672 }])
+    expect(() => parseOtherCapital('date,amount,note\n17/12/2025,5,x')).toThrow(/date/)
+    expect(() => parseOtherCapital('date,amount,note\n2025-12-17,0,x')).toThrow(/amount/)
+  })
+  it('importing again replaces file entries and keeps the ones typed in the app', () => {
+    const a = { ...blankAccount('TT1234'), extraCapital: [{ id: 'typed', date: '2024-01-01', amount: 100, note: 'manual' }] }
+    applyOtherCapital(a, parseOtherCapital(csv))
+    applyOtherCapital(a, parseOtherCapital(csv.replace('207840', '200000')))
+    expect(a.extraCapital.map(x => x.amount).sort((x, y) => x - y)).toEqual([100, 14672, 200000])
+  })
+  it('a key with several suggestions hides all of them', () => {
+    const t = (date: string, side: 'buy' | 'sell', quantity: number, n: number) => ({ symbol: 'AZAD', isin: 'INE02IJ01035', date, exchange: 'NSE', side, quantity, price: 1000, tradeId: String(n), orderId: String(n), executedAt: `${date}T10:00:00` })
+    const a = { ...blankAccount('TT1234'), eqTrades: [t('2025-06-11', 'sell', 10, 1), t('2026-10-14', 'sell', 18, 2)] }
+    expect(suggestOffLedgerCapital(a).suggestions).toHaveLength(2)
+    applyOtherCapital(a, parseOtherCapital(csv))
+    expect(suggestOffLedgerCapital(a).suggestions).toHaveLength(0)
+  })
+})

@@ -79,6 +79,6 @@ export function suggestOffLedgerCapital(a: AccountRecord): SuggestionResult {
     }
   }
 
-  const accepted = new Set((a.extraCapital ?? []).map(x => x.key).filter(Boolean))
+  const accepted = new Set((a.extraCapital ?? []).flatMap(x => (x.key ?? '').split(';')).map(k => k.trim()).filter(Boolean))
   return { suggestions: [...out.values()].filter(s => !accepted.has(s.key)).sort((x, y) => x.date.localeCompare(y.date)), blockedBy }
 }

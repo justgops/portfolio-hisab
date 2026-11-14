@@ -4,8 +4,9 @@ import { parseCsv } from './csv.ts'
 import { fyLabel, fyStartYear } from './fy.ts'
 import { parseDividends } from './dividends.ts'
 import { parseTradebook } from './tradebook.ts'
+import { isOtherCapitalCsv } from './capital.ts'
 
-export type FileKind = 'ledger' | 'tradebook-eq' | 'tradebook-fo' | 'holdings' | 'dividends'
+export type FileKind = 'ledger' | 'tradebook-eq' | 'tradebook-fo' | 'holdings' | 'dividends' | 'capital'
 
 export interface FileIdentity {
   kind: FileKind
@@ -33,7 +34,7 @@ function clientIdFromLedgerText(text: string): string | null {
 /**
  * Works out what a Console export is from its contents (any filename), and the
  * canonical name it should be stored under: ClientID_FY_EQ|FO|DIVIDENDS.csv, ClientID_FYs_LEDGER.csv,
- * ClientID_asOnDate_HOLDINGS.xlsx. `fallbackClientId` is used when neither name nor contents say.
+ * ClientID_asOnDate_HOLDINGS.xlsx, ClientID_OTHER_CAPITAL.csv. `fallbackClientId` is used when neither name nor contents say.
  */
 export function identifyFile(name: string, bytes: Uint8Array, fallbackClientId?: string | null): FileIdentity {
   const resolve = (fromContents: string | null) => {
@@ -62,6 +63,10 @@ export function identifyFile(name: string, bytes: Uint8Array, fallbackClientId?:
     const dates = parseDividends(text).map(d => d.date)
     const r = resolve(null)
     return { kind: 'dividends', clientId: r.id, source: r.source, canonical: r.id && dates.length ? `${r.id}_${fyRange(dates)}_DIVIDENDS.csv` : null }
+  }
+  if (isOtherCapitalCsv(head)) {
+    const r = resolve(null)
+    return { kind: 'capital', clientId: r.id, source: r.source, canonical: r.id ? `${r.id}_OTHER_CAPITAL.csv` : null }
   }
   if (head.startsWith('symbol,')) {
     // The segment column is authoritative; currency (CDS), commodity (COM) etc. are not tracked here.

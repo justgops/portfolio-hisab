@@ -103,7 +103,7 @@ function OtherCapital({ account }: { account: AccountRecord }) {
                 <tr key={e.id} className="odd:bg-gray-50">
                   <td className={td}>{e.date}</td><td className={td}>{inrSigned(e.amount)}</td>
                   <td className={`${td} whitespace-normal text-left`}>{e.note || '–'}</td>
-                  <td className={td}><button type="button" aria-label="Remove entry" className="p-2 text-red-600" onClick={() => void put(entries.filter(x => x.id !== e.id))}>✕</button></td>
+                  <td className={td}>{e.source === 'file' ? <span className="text-xs text-gray-500" title="From the OTHER_CAPITAL file. Edit the file and import it again to change it.">file</span> : <button type="button" aria-label="Remove entry" className="p-2 text-red-600" onClick={() => void put(entries.filter(x => x.id !== e.id))}>✕</button>}</td>
                 </tr>
               ))}
             </tbody>

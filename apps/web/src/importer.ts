@@ -1,4 +1,4 @@
-import { blankAccount, type ImportKind, dedupeTrades, identifyFile, mergeLedger, dedupeDividends, parseBackup, parseDividends, parseHoldingsXlsx, parseLedger, parseTradebook } from '@zp/core'
+import { blankAccount, type ImportKind, dedupeTrades, identifyFile, mergeLedger, dedupeDividends, parseBackup, parseDividends, parseHoldingsXlsx, parseLedger, parseTradebook, applyOtherCapital, parseOtherCapital } from '@zp/core'
 import type { AccountRecord } from './db.ts'
 import { ACCOUNT_DEFAULTS } from './accountDefaults.ts'
 
@@ -57,6 +57,10 @@ export async function importFiles(files: File[], accounts: Map<string, AccountRe
         const before = a.dividends.length
         a.dividends = dedupeDividends([...a.dividends, ...rows])
         results.push({ file: f.name, ok: true, clientId: idn.clientId, message: `Dividends: ${rows.length} rows, ${a.dividends.length - before} new${saved}` })
+      } else if (idn.kind === 'capital') {
+        const rows = parseOtherCapital(text)
+        applyOtherCapital(a, rows)
+        results.push({ file: f.name, ok: true, clientId: idn.clientId, message: `Other capital: ${rows.length} entr${rows.length === 1 ? 'y' : 'ies'}, replacing the ones from an earlier file${saved}` })
       } else {
         const fo = idn.kind === 'tradebook-fo'
         const rows = parseTradebook(text)
