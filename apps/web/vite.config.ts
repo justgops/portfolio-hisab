@@ -14,7 +14,7 @@ const inputFolder = {
   name: 'input-folder',
   apply: 'serve' as const,
   configureServer(server: import('vite').ViteDevServer) {
-    // Anything dropped into Input/ is renamed to ClientID_FY_EQ|FO.csv etc. by its contents.
+    // Anything dropped loose into Input/ is filed into Input/<ClientID>/<kind>/ and renamed by its contents.
     const script = path.resolve(__dirname, '../../scripts/organize-input.ts')
     let timer: NodeJS.Timeout | undefined
     const organize = () => {
@@ -24,18 +24,30 @@ const inputFolder = {
     if (fs.existsSync(inputDir)) {
       organize()
       server.watcher.add(inputDir)
-      server.watcher.on('add', f => { if (path.dirname(f) === inputDir) organize() })
+      server.watcher.on('add', f => { if (path.dirname(f) === inputDir) organize() })   // only loose files; filed ones are already in place
+    }
+    // Lists every csv/xlsx as a path relative to Input/: loose files plus Input/<ClientID>/<kind>/ ones.
+    const isData = (f: string) => /\.(csv|xlsx)$/i.test(f)
+    const isAccountDir = (n: string) => /^[A-Z0-9]{4,}$/.test(n) && /\d/.test(n)
+    const list = (): string[] => {
+      if (!fs.existsSync(inputDir)) return []
+      const out: string[] = []
+      for (const e of fs.readdirSync(inputDir).sort()) {
+        const p = path.join(inputDir, e)
+        if (fs.statSync(p).isFile()) { if (isData(e)) out.push(e) }
+        else if (isAccountDir(e)) for (const sub of fs.readdirSync(p).sort()) {
+          const sp = path.join(p, sub)
+          if (fs.statSync(sp).isFile()) { if (isData(sub)) out.push(`${e}/${sub}`) }
+          else for (const f of fs.readdirSync(sp).sort()) if (isData(f)) out.push(`${e}/${sub}/${f}`)
+        }
+      }
+      return out
     }
     server.middlewares.use('/__input', (req, res) => {
-      const name = decodeURIComponent((req.url ?? '/').split('?')[0].replace(/^\//, ''))
-      if (!name) {
-        res.setHeader('content-type', 'application/json')
-        res.end(JSON.stringify(fs.existsSync(inputDir) ? fs.readdirSync(inputDir).filter(f => /\.(csv|xlsx)$/i.test(f)) : []))
-        return
-      }
-      const file = path.join(inputDir, path.basename(name))
-      if (!fs.existsSync(file)) { res.statusCode = 404; res.end(); return }
-      res.end(fs.readFileSync(file))
+      const rel = decodeURIComponent((req.url ?? '/').split('?')[0].replace(/^\//, ''))
+      if (!rel) { res.setHeader('content-type', 'application/json'); res.end(JSON.stringify(list())); return }
+      if (!list().includes(rel)) { res.statusCode = 404; res.end(); return }   // only files the listing would show
+      res.end(fs.readFileSync(path.join(inputDir, rel)))
     })
   },
 }
