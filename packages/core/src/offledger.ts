@@ -22,7 +22,8 @@ const base = (s: string) => s.split('-')[0]
  * Finds shares that came into the account without a bank transfer, from the tradebooks:
  *  - a sell with no matching buy (IPO paid by UPI, shares moved in from another demat): counted as capital
  *    added on the sell date at the sale proceeds, i.e. assuming no gain before the sale;
- *  - a current holding with no matching buy: counted at average cost, dated at the holdings date.
+ *  - a current holding whose cost the tradebooks do not explain: the missing cost is counted, dated at the holdings date.
+ *    Compared by ISIN and by cost, so renames, bonus issues and splits do not create capital.
  * Entries already accepted (matched by key) are not suggested again.
  */
 export function suggestOffLedgerCapital(a: AccountRecord): SuggestionResult {
@@ -40,14 +41,19 @@ export function suggestOffLedgerCapital(a: AccountRecord): SuggestionResult {
     else out.set(key, { key, date: u.date, amount, note: `Sold ${u.quantity.toLocaleString('en-IN')} ${u.symbol} with no purchase on record` })
   }
 
-  const open = new Map<string, number>()
-  for (const s of slices) if (!s.sellDate) open.set(base(s.symbol), (open.get(base(s.symbol)) ?? 0) + s.quantity)
+  // Cost of the lots the tradebooks leave open, per stock. Stocks are keyed by ISIN so a rename (CREATIVE -> CNL) still matches.
+  const isinOf = new Map(a.eqTrades.map(t => [t.symbol, t.isin || t.symbol]))
+  const keyOf = (symbol: string, isin?: string) => isin && !/^SCREENSHOT/i.test(isin) ? isin : isinOf.get(symbol) ?? base(symbol)
+  const openCost = new Map<string, number>()
+  for (const s of slices) if (!s.sellDate) openCost.set(keyOf(s.symbol), (openCost.get(keyOf(s.symbol)) ?? 0) + s.quantity * s.buyPrice)
   if (a.holdingsAsOn) {
     for (const h of a.holdings) {
-      const undated = h.quantity - Math.min(open.get(base(h.symbol)) ?? 0, h.quantity)
-      if (undated > 1e-9 && h.avgPrice > 0) {
+      // Compare cost, not quantity: a bonus or split gives more shares for the same money, so it is not new capital.
+      const cost = h.quantity * h.avgPrice
+      const missing = cost - Math.min(openCost.get(keyOf(h.symbol, h.isin)) ?? openCost.get(base(h.symbol)) ?? 0, cost)
+      if (missing > Math.max(500, cost * 0.02) && h.avgPrice > 0) {
         const key = `hold:${h.symbol}`
-        out.set(key, { key, date: a.holdingsAsOn, amount: undated * h.avgPrice, note: `Holding ${undated.toLocaleString('en-IN')} ${h.symbol} with no purchase on record, at average cost` })
+        out.set(key, { key, date: a.holdingsAsOn, amount: missing, note: `Holding ${h.symbol} cost not found in the tradebooks (about ${Math.round(missing / h.avgPrice).toLocaleString('en-IN')} shares at average cost)` })
       }
     }
   }

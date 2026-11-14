@@ -468,3 +468,32 @@ describe('upgradeLedgerKinds (data saved by an older build)', () => {
     expect(upgradeLedgerKinds([row]).entries[0].kind).toBe('settlement')
   })
 })
+
+import { suggestOffLedgerCapital } from './index.ts'
+
+describe('off-ledger capital suggestions', () => {
+  const trade = (symbol: string, isin: string, date: string, side: 'buy' | 'sell', quantity: number, price: number, n: number) =>
+    ({ symbol, isin, date, exchange: 'NSE', side, quantity, price, tradeId: String(n), orderId: String(n), executedAt: `${date}T10:00:00` })
+  const hold = (symbol: string, isin: string, quantity: number, avgPrice: number) =>
+    ({ symbol, isin, kind: 'equity' as const, sector: '', quantity, longTermQty: 0, avgPrice, prevClose: avgPrice })
+  const acct = (trades: ReturnType<typeof trade>[], holdings: ReturnType<typeof hold>[]) =>
+    ({ ...blankAccount('T1234'), eqTrades: trades, holdings, holdingsAsOn: '2026-11-14' })
+
+  it('a symbol rename (same ISIN) is not new capital', () => {
+    const a = acct([trade('CREATIVE', 'INE985W01018', '2024-09-16', 'buy', 500, 1000, 1)], [hold('CNL', 'INE985W01018', 500, 1000)])
+    expect(suggestOffLedgerCapital(a).suggestions).toEqual([])
+  })
+  it('a bonus or split (more shares, same cost) is not new capital', () => {
+    const a = acct([trade('ROTO', 'INE535D01037', '2024-12-17', 'buy', 1500, 300, 1)], [hold('ROTO', 'INE535D01037', 4500, 100)])
+    expect(suggestOffLedgerCapital(a).suggestions).toEqual([])
+  })
+  it('shares with no purchase are suggested at the cost the tradebooks do not explain', () => {
+    const a = acct([trade('AAA', 'INE000A01010', '2024-01-01', 'buy', 10, 100, 1)], [hold('AAA', 'INE000A01010', 30, 200), hold('BBB', 'INE000B01010', 10, 50)])
+    const s = suggestOffLedgerCapital(a).suggestions
+    expect(s.map(x => [x.key, Math.round(x.amount)])).toEqual([['hold:AAA', 5000]])   // BBB: ₹500 missing is under the noise threshold
+  })
+  it('a sell with no purchase is suggested at the sale proceeds', () => {
+    const a = acct([trade('IPO', 'INE000C01010', '2025-12-19', 'sell', 6, 2600, 1)], [])
+    expect(suggestOffLedgerCapital(a).suggestions).toMatchObject([{ key: 'sell:2025-12-19:IPO', amount: 15600 }])
+  })
+})
