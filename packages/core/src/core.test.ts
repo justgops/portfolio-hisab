@@ -488,9 +488,22 @@ describe('off-ledger capital suggestions', () => {
     expect(suggestOffLedgerCapital(a).suggestions).toEqual([])
   })
   it('shares with no purchase are suggested at the cost the tradebooks do not explain', () => {
-    const a = acct([trade('AAA', 'INE000A01010', '2024-01-01', 'buy', 10, 100, 1)], [hold('AAA', 'INE000A01010', 30, 200), hold('BBB', 'INE000B01010', 10, 50)])
+    const a = acct([trade('AAA', 'INE000A01010', '2024-01-01', 'buy', 10, 100, 1)], [hold('AAA', 'INE000A01010', 30, 400), hold('BBB', 'INE000B01010', 10, 50)])
     const s = suggestOffLedgerCapital(a).suggestions
-    expect(s.map(x => [x.key, Math.round(x.amount)])).toEqual([['hold:AAA', 5000]])   // BBB: ₹500 missing is under the noise threshold
+    expect(s.map(x => [x.key, Math.round(x.amount)])).toEqual([['hold:AAA', 11000]])   // BBB: ₹500 is under the noise threshold
+  })
+  it('a merger that moves shares to a new symbol and ISIN is not new capital', () => {
+    const a = acct([trade('APOLLOTRI', 'INE919P01029', '2022-09-05', 'buy', 55, 1012, 1)], [hold('APLAPOLLO', 'INE702C01027', 55, 1012)])
+    expect(suggestOffLedgerCapital(a).suggestions).toEqual([])
+  })
+  it('a split that changes the ISIN under the same symbol is not new capital', () => {
+    const a = acct([trade('PCJ', 'INE785M01013', '2018-05-08', 'buy', 100, 170, 1), trade('PCJ', 'INE785M01021', '2025-07-04', 'buy', 1000, 16, 2)],
+      [hold('PCJ', 'INE785M01021', 2000, 25)])   // Zerodha's average price differs from our lot matching, but most of the cost is explained
+    expect(suggestOffLedgerCapital(a).suggestions).toEqual([])
+  })
+  it('extra shares sold after a bonus issue are not capital when the stock was bought before', () => {
+    const a = acct([trade('SBC', 'INE04AK01028', '2023-11-23', 'buy', 3030, 33, 1), trade('SBC', 'INE04AK01028', '2024-02-09', 'sell', 4545, 23, 2)], [])
+    expect(suggestOffLedgerCapital(a).suggestions).toEqual([])
   })
   it('a sell with no purchase is suggested at the sale proceeds', () => {
     const a = acct([trade('IPO', 'INE000C01010', '2025-12-19', 'sell', 6, 2600, 1)], [])
