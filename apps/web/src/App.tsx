@@ -4,8 +4,7 @@ import { useData } from './data.tsx'
 import { InstallGate } from './InstallGate.tsx'
 import { isInstalledOrDesktop } from './install.ts'
 import AccountsPage from './pages/AccountsPage.tsx'
-import DashboardPage from './pages/DashboardPage.tsx'
-import HoldingsPage from './pages/HoldingsPage.tsx'
+import PortfolioPage from './pages/PortfolioPage.tsx'
 import InsightsPage from './pages/InsightsPage.tsx'
 import ImportPage from './pages/ImportPage.tsx'
 import SchedulePage from './pages/SchedulePage.tsx'
@@ -23,9 +22,8 @@ export default function App() {
   if (!ready) return null
   return (
     <Routes>
-      <Route path="/" element={<DashboardPage />} />
+      <Route path="/" element={<PortfolioPage />} />
       <Route path="/schedule" element={<SchedulePage />} />
-      <Route path="/holdings" element={<HoldingsPage />} />
       <Route path="/insights" element={<InsightsPage />} />
       <Route path="/accounts" element={<AccountsPage />} />
       <Route path="/import" element={<ImportPage />} />

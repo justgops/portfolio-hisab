@@ -7,8 +7,8 @@ Everything runs in the browser and is stored on the device; nothing is uploaded.
 
 - `packages/core`: pure TypeScript, no UI. Parsers for Console exports (ledger, tradebook, holdings, dividends), the year-by-year
   hurdle schedule, XIRR, per-account and combined views, backup export/import. Tested with Vitest.
-- `apps/web`: the PWA (pages: Dashboard, Investment schedule, Holdings, Insights, Accounts, Import & backup).
-- `scripts/organize-input.ts`: renames Console exports in `Input/` to `ClientID_FY_EQ|FO.csv` etc. by their contents (`npm run organize`).
+- `apps/web`: the PWA (pages: Portfolio (home: headline, holdings, accounts, diversification), Investment schedule, Insights, Accounts, Import & backup).
+- `scripts/organize-input.ts`: files Console exports into `Input/<ClientID>/{ledger,tradebook,dividends,holdings}/` and renames them by their contents (`npm run organize`; add `-- --dry` to preview).
 
 ## Run
 
@@ -19,7 +19,7 @@ npm run build
 npm test           # core tests
 ```
 
-Create an `Input/` folder next to `package.json` and put your Console exports in it. In dev they are loaded automatically on first run,
+Create an `Input/` folder next to `package.json` and drop your Console exports loose in it. They are sorted into one folder per account (`Input/<ClientID>/ledger`, `tradebook`, `dividends`, `holdings`) automatically in dev, or with `npm run organize`. In dev they are loaded automatically on first run,
 and the dev server renames anything dropped there. The folder is not part of the repository.
 
 ## Deploy (Coolify, same flow as fabric-costing-lite)

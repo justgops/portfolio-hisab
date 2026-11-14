@@ -11,7 +11,7 @@ export function useFreshness(): AccountFreshness[] {
   return useMemo(() => accounts.map(a => accountFreshness(a, today())), [accounts])
 }
 
-/** Amber reminder on the Dashboard when holdings or the ledger are out of date. Renders nothing when all is current. */
+/** Amber reminder on the Portfolio page when holdings or the ledger are out of date. Renders nothing when all is current. */
 export function FreshnessReminder() {
   const reminders = useFreshness().flatMap(f => f.reminders)
   const navigate = useNavigate()
