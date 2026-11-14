@@ -1,4 +1,4 @@
-import { daysBetween, fyLabel, fyStartYear } from './fy.ts'
+import { fyLabel, fyStartYear } from './fy.ts'
 import { opportunityCost } from './interest.ts'
 import type { ISODate, LedgerEntry } from './types.ts'
 
@@ -20,58 +20,6 @@ export function cashBalanceAsOf(entries: LedgerEntry[], asOf: ISODate): number {
   let bal = 0
   for (const e of entries) if (e.date && e.date <= asOf && e.kind !== 'closing') bal = e.balance
   return bal
-}
-
-export interface InvestmentRow {
-  fy: string
-  yearlyInvestment: number      // net pay-in minus payout within the FY
-  yearlyInterest: number        // interest on this FY's flows, up to asOf
-  totalInvestmentPrior: number  // cumulative investment of earlier FYs
-  prevYearsInterest: number     // cumulative yearlyInterest of earlier FYs
-  interestOnInterest: number    // rate * prevYearsInterest
-  netInvestment: number         // running balance incl. interest
-}
-
-export interface InvestmentSummary {
-  rows: InvestmentRow[]
-  totalInvestment: number
-  totalInterest: number
-  netInvestment: number         // totalInvestment + totalInterest
-}
-
-/**
- * "dashboard" method (matches the Power BI report): each flow accrues simple
- *   interest `rate` from its date to asOf; per-FY rows then add rate * previous
- *   years' interest as interest-on-interest.
- * "fy-compound" method: each flow compounds yearly at 31 Mar (see opportunityCost).
- */
-export function investmentSummary(
-  flows: Flow[], asOf: ISODate, rate: number, method: 'dashboard' | 'fy-compound' = 'dashboard',
-): InvestmentSummary {
-  const inv = new Map<string, number>()
-  const intr = new Map<string, number>()
-  for (const f of flows) {
-    const k = fyLabel(fyStartYear(f.date))
-    inv.set(k, (inv.get(k) ?? 0) + f.amount)
-    let i: number
-    if (method === 'dashboard') i = f.amount * rate * daysBetween(f.date, asOf) / 365
-    else i = Math.sign(f.amount) * opportunityCost(Math.abs(f.amount), f.date, asOf, rate).compound
-    intr.set(k, (intr.get(k) ?? 0) + i)
-  }
-  const fys = [...inv.keys()].sort()
-  let cumInv = 0, cumInt = 0
-  const rows: InvestmentRow[] = fys.map(fy => {
-    const yi = inv.get(fy)!, yint = intr.get(fy)!
-    const ioi = method === 'dashboard' ? rate * cumInt : 0
-    const row: InvestmentRow = {
-      fy, yearlyInvestment: yi, yearlyInterest: yint,
-      totalInvestmentPrior: cumInv, prevYearsInterest: cumInt, interestOnInterest: ioi,
-      netInvestment: cumInv + cumInt + yi + yint + ioi,
-    }
-    cumInv += yi; cumInt += yint
-    return row
-  })
-  return { rows, totalInvestment: cumInv, totalInterest: cumInt, netInvestment: cumInv + cumInt }
 }
 
 export interface ScheduleRow {

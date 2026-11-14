@@ -2,7 +2,10 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { buildLots, buildReport, cashSlices, opportunityCost, parseLedger, parseTradebook, fyLabel, fyStartYear } from './index.ts'
 
-const input = (f: string) => readFileSync(new URL(`../../../Input/${f}`, import.meta.url), 'utf8')
+// Input/<ClientID>/<kind>/<file>, see scripts/inputLayout.ts
+const kindDir = (f: string) => (/_LEDGER\./.test(f) ? 'ledger' : /_HOLDINGS\./.test(f) ? 'holdings' : /_DIVIDENDS\./.test(f) ? 'dividends' : 'tradebook')
+const inputUrl = (f: string) => new URL(`../../../Input/${f.split('_')[0]}/${kindDir(f)}/${f}`, import.meta.url)
+const input = (f: string) => readFileSync(inputUrl(f), 'utf8')
 
 describe('opportunityCost', () => {
   it('2500 from 1 Oct: partial FY1 (182d), full FY2, FY3', () => {
@@ -77,7 +80,7 @@ describe('sample files', () => {
 import { parseHoldingsXlsx, pricesFromHoldings, reconcile } from './index.ts'
 
 describe('holdings xlsx', () => {
-  const h = parseHoldingsXlsx(new Uint8Array(readFileSync(new URL('../../../Input/YK2142_2026-11-14_HOLDINGS.xlsx', import.meta.url))))
+  const h = parseHoldingsXlsx(new Uint8Array(readFileSync(inputUrl('YK2142_2026-11-14_HOLDINGS.xlsx'))))
   it('parses equity + mf, ignores combined', () => {
     expect(h.clientId).toBe('YK2142')
     expect(h.asOn).toBe('2026-11-14')
@@ -102,28 +105,12 @@ describe('holdings xlsx', () => {
   })
 })
 
-import { cashBalanceAsOf, flowsFromLedger, investmentSummary } from './index.ts'
+import { cashBalanceAsOf, flowsFromLedger } from './index.ts'
 
-describe('investment summary vs Power BI dashboard (as of 2025-12-31)', () => {
+describe('ledger cash balance', () => {
   const led = parseLedger(input('YK2142_2017-18_to_2026-27_LEDGER.csv'))
-  const asOf = '2025-12-31'
-  const s = investmentSummary(flowsFromLedger(led, asOf), asOf, 0.12)
-  const by = Object.fromEntries(s.rows.map(r => [r.fy, r]))
-  it('yearly investment matches exactly', () => {
-    const dash: Record<string, number> = { '2017-18': 171700, '2018-19': 29000, '2019-20': -6294, '2020-21': 88966, '2021-22': 601661, '2022-23': 191838, '2023-24': -151256, '2024-25': -96731 }
-    for (const [k, v] of Object.entries(dash)) expect(by[k].yearlyInvestment).toBeCloseTo(v, 0)
-  })
-  it('yearly interest within 0.5% of dashboard, totals close', () => {
-    const dash: Record<string, number> = { '2017-18': 163760, '2018-19': 27157, '2020-21': 68343, '2021-22': 312001, '2022-23': 80218 }
-    for (const [k, v] of Object.entries(dash)) expect(Math.abs(by[k].yearlyInterest - v) / v).toBeLessThan(0.005)
-    expect(Math.abs(s.totalInterest - 606875) / 606875).toBeLessThan(0.01)
-  })
   it('cash balance on 2025-12-31', () => {
-    expect(cashBalanceAsOf(led, asOf)).toBeCloseTo(48716.49, 1)
-  })
-  it('fy-compound method is higher than simple for same flows', () => {
-    const c = investmentSummary(flowsFromLedger(led, asOf), asOf, 0.12, 'fy-compound')
-    expect(c.totalInterest).toBeGreaterThan(s.totalInterest)
+    expect(cashBalanceAsOf(led, '2025-12-31')).toBeCloseTo(48716.49, 1)
   })
 })
 
@@ -131,7 +118,7 @@ import { accountView, combine } from './index.ts'
 
 describe('dashboard view-model', () => {
   const led = parseLedger(input('YK2142_2017-18_to_2026-27_LEDGER.csv'))
-  const hs = parseHoldingsXlsx(new Uint8Array(readFileSync(new URL('../../../Input/YK2142_2026-11-14_HOLDINGS.xlsx', import.meta.url))))
+  const hs = parseHoldingsXlsx(new Uint8Array(readFileSync(inputUrl('YK2142_2026-11-14_HOLDINGS.xlsx'))))
   const acc = { clientId: 'YK2142', name: 'Test Owner', ledger: led, holdings: hs.holdings.filter(h => h.kind === 'equity'), holdingsAsOn: hs.asOn }
   const v = accountView(acc, '2026-11-14', 0.12)
   it('equity-only market value, long-term qty parsed', () => {
@@ -191,7 +178,7 @@ describe('clientIdFromFilename', () => {
 
 import { identifyFile } from './index.ts'
 describe('identifyFile (any filename)', () => {
-  const bytes = (f: string) => new Uint8Array(readFileSync(new URL(`../../../Input/${f}`, import.meta.url)))
+  const bytes = (f: string) => new Uint8Array(readFileSync(inputUrl(f)))
   it('tradebook: segment + FY from contents, client from fallback', () => {
     const eq = identifyFile('download (7).csv', bytes('YK2142_2020-21_EQ.csv'), 'YK2142')
     expect(eq).toMatchObject({ kind: 'tradebook-eq', clientId: 'YK2142', canonical: 'YK2142_2020-21_EQ.csv', source: 'fallback' })
@@ -218,7 +205,7 @@ describe('identifyFile (any filename)', () => {
 
 
 describe('matching edge cases', () => {
-  const eq = new Uint8Array(readFileSync(new URL('../../../Input/YK2142_2020-21_EQ.csv', import.meta.url)))
+  const eq = new Uint8Array(readFileSync(inputUrl('YK2142_2020-21_EQ.csv')))
   it('a name like ledger-final.csv does not invent an account', () => {
     expect(identifyFile('tradebook-eq-2021.csv', eq, 'YK2142')).toMatchObject({ clientId: 'YK2142', source: 'fallback' })
   })
@@ -227,7 +214,7 @@ describe('matching edge cases', () => {
     expect(() => identifyFile('x.csv', new TextEncoder().encode(cds), 'YK2142')).toThrow(/Unsupported tradebook segment "CDS"/)
   })
   it('dedupe keeps different fills that share a trade number', () => {
-    const t = parseTradebook(readFileSync(new URL('../../../Input/YK2142_2020-21_EQ.csv', import.meta.url), 'utf8'))
+    const t = parseTradebook(readFileSync(inputUrl('YK2142_2020-21_EQ.csv'), 'utf8'))
     const other = { ...t[0], date: '2021-03-01', quantity: 7 }
     expect(dedupeTrades([t[0], other])).toHaveLength(2)
     expect(dedupeTrades([t[0], { ...t[0] }])).toHaveLength(1)
@@ -276,7 +263,7 @@ describe('xirr', () => {
 
 describe('account metrics (YK2142 as of 2026-11-14)', () => {
   const led = parseLedger(input('YK2142_2017-18_to_2026-27_LEDGER.csv'))
-  const hs = parseHoldingsXlsx(new Uint8Array(readFileSync(new URL('../../../Input/YK2142_2026-11-14_HOLDINGS.xlsx', import.meta.url))))
+  const hs = parseHoldingsXlsx(new Uint8Array(readFileSync(inputUrl('YK2142_2026-11-14_HOLDINGS.xlsx'))))
   const acc = { clientId: 'YK2142', name: 'S', ledger: led, holdings: hs.holdings.filter(h => h.kind === 'equity'), holdingsAsOn: hs.asOn }
   const v = accountView(acc, '2026-11-14', 0.12)
   it('value, gain, hurdle gap', () => {
@@ -357,7 +344,7 @@ describe('backup', () => {
 import { aggregateHoldings } from './index.ts'
 describe('aggregateHoldings', () => {
   const led = parseLedger(input('YK2142_2026-27_LEDGER.csv'))
-  const hs = parseHoldingsXlsx(new Uint8Array(readFileSync(new URL('../../../Input/YK2142_2026-11-14_HOLDINGS.xlsx', import.meta.url))))
+  const hs = parseHoldingsXlsx(new Uint8Array(readFileSync(inputUrl('YK2142_2026-11-14_HOLDINGS.xlsx'))))
   const acc = { clientId: 'A', name: 'A', ledger: led, holdings: hs.holdings.filter(h => h.kind === 'equity'), holdingsAsOn: hs.asOn }
   const a = accountView(acc, '2026-11-14', 0.12), b = accountView({ ...acc, clientId: 'B' }, '2026-11-14', 0.12)
   it('sums same symbols across accounts and re-bases weights', () => {
