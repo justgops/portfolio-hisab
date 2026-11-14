@@ -125,7 +125,13 @@ export default function PortfolioPage() {
           <div className="text-xs text-gray-500">Holdings ₹{inr(total.market)} + cash ₹{inr(total.cash)}</div>
         </div>
         <div className="flex items-center justify-between px-4 py-3">
-          <div><div className="text-sm text-gray-600">Invested Amount</div><div className="text-lg font-bold tabular-nums">₹{inr(total.totalInvestment)}</div></div>
+          <div>
+            <div className="text-sm text-gray-600">Invested Amount</div>
+            <div className="text-lg font-bold tabular-nums">₹{inr(total.totalInvestment)}</div>
+            <div className="text-xs text-gray-500" title="What the same pay-ins and payouts would be worth today if they had earned the hurdle rate a year, compounded each 31 March (see Investment schedule)">
+              ₹{inr(total.netInvestment)} with {ratePct}% interest
+            </div>
+          </div>
           <div className="text-right"><div className="text-sm text-gray-600">Total P&L</div>
             <div className={`text-lg font-bold tabular-nums ${tone(total.gain)}`}>{compactSigned(total.gain)} ({pctSigned(total.gainPct, 2)})</div></div>
         </div>
